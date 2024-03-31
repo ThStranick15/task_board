@@ -24,9 +24,10 @@ function createTaskCard(task,index) {
     const descInput = task.desc
     //Determine the due date
     const taskStyle = dayjs().isAfter(dayjs(dateInput), 'day') ? 'bg-danger' : dayjs().isSame(dayjs(dateInput), 'day') ? 'bg-warning' : 'bg-primary'
+    const finalStyle = task.loc === 'done' ? 'bg-success' : taskStyle
     //Create Card
     section.append(`
-        <article data-index="${index}" class="d-flex flex-column w-100 align-items-center ${taskStyle} p-2 mt-2 to-do">
+        <article data-index="${index}" class="d-flex flex-column w-100 align-items-center ${finalStyle} p-2 mt-2 to-do">
             <h2>${titleInput}</h2>
             <p>${descInput}</p>
             <p>${dateInput}</p>
@@ -110,7 +111,33 @@ function handleDeleteTask(event){
 
 // Todo: create a function to handle dropping a task into a new status lane
 function handleDrop(event, ui) {
-    
+    const tasks = JSON.parse(localStorage.getItem('tasks'))  || []
+    const section = $(event.target)
+    const task = $(ui.draggable[0])
+    const index = task.data('index')
+    const taskStyle = dayjs().isAfter(dayjs(tasks[index].date), 'day') ? 'bg-danger' : dayjs().isSame(dayjs(tasks[index].date), 'day') ? 'bg-warning' : 'bg-primary'
+    //Checking which section it was dropped into and appending
+    if(section.is('#to-do')){
+        task.appendTo('#todo-cards')
+        tasks[index].loc = 'toDo'
+        task.removeClass('bg-success')
+        task.addClass(taskStyle)
+    }
+    else if(section.is('#in-progress')){
+        task.appendTo('#in-progress-cards')
+        tasks[index].loc = 'inProgress'
+        task.removeClass('bg-success')
+        task.addClass(taskStyle)
+    }
+    else{
+        task.appendTo('#done-cards')
+        tasks[index].loc = 'done'
+        task.removeClass('bg-danger') 
+        task.removeClass('bg-warning')
+        task.addClass('bg-success')
+    }
+
+    localStorage.setItem('tasks', JSON.stringify(tasks))
 }
 
 // Todo: when the page loads, render the task list, add event listeners, make lanes droppable, and make the due date field a date picker
@@ -118,31 +145,13 @@ $(document).ready(function () {
     //Render Task List
     renderTaskList()
     //Event Listners for Modal Form & Datepicker
-    date.on('click', function(){date.datepicker()})
+    date.datepicker()
     submit.on('click', handleAddTask)
     deleteBtn.on('click', 'button', handleDeleteTask)
 
     //Droppable
     $('#to-do, #in-progress, #done').droppable({
         accept: 'article',
-        drop: function(eventDrop, ui){
-            console.log('hi')
-            const tasks = JSON.parse(localStorage.getItem('tasks'))  || []
-
-    const section = $(eventDrop.target)
-    const task = $(ui.draggable[0])
-    const index = task.data('index')
-    section.append(task)
-    if(section.hasClass('to-do')){
-        tasks[index].loc = 'toDo'
-    }
-    else if(section.hasClass('in-progress')){
-        tasks[index].loc = 'inProgress'
-    }
-    else{
-        tasks[index].loc = 'done'
-    }
-
-    localStorage.setItem('tasks', JSON.stringify(tasks))
-    }})
+        drop: handleDrop
+    })
 });
